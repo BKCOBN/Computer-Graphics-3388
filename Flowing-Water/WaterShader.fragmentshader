@@ -1,0 +1,77 @@
+#version 400
+
+// supports multiple debug modes
+
+// inputs from geo shader
+in vec3 gs_out_normal;
+in vec3 gs_out_eyeDirection;
+in vec3 gs_out_lightDirection;
+in vec2 gs_out_uv;
+
+// output
+out vec4 color_out;
+
+// uniforms
+uniform sampler2D waterTexture;         // main diffuse texture (e.g., water surface)
+uniform sampler2D displacementTexture;  // FOR DEBUG MODE: view of height map
+uniform float alpha;                    // shininess
+uniform int debugMode;                  // 0 = normal, 1 = normals, 2 = height, 3 = UV
+
+// could also be passed in if using transparency
+uniform vec4 modelColor = vec4(1.0, 1.0, 1.0, 1.0);
+
+// lighting helper function
+void phongColor(out vec4 resultColor) {
+    // light color, white for full intensity
+    vec4 lightColor = vec4(1.0, 1.0, 1.0, 1.0);
+
+    // sample base color from the diffuse texture using UVs
+    vec4 diffuseColor = texture(waterTexture, gs_out_uv);
+
+    // ambient + specular terms using transparency
+    vec4 ambientColor  = vec4(0.2, 0.2, 0.2, modelColor.a) * diffuseColor;
+    vec4 specularColor = vec4(0.7, 0.7, 0.7, modelColor.a);
+
+    // lighting vectors
+    vec3 n = normalize(gs_out_normal);             // surface normal
+    vec3 l = normalize(gs_out_lightDirection);     // light direction
+    vec3 v = normalize(gs_out_eyeDirection);       // eye/view direction
+    vec3 r = reflect(-l, n);                       // reflection direction
+
+    // cos of angle btwn light + normal
+    float cosTheta = clamp(dot(n, l), 0.0, 1.0);
+
+    // cos of angle btwn reflection + view dir
+    float cosAlpha = clamp(dot(v, r), 0.0, 1.0);
+
+    // final shaded colour
+    resultColor = ambientColor + diffuseColor * lightColor * cosTheta + specularColor * lightColor * pow(cosAlpha, alpha);
+    resultColor = clamp(resultColor, 0.0, 1.0);
+}
+
+// main function
+void main() {
+    vec4 shadedColor;
+
+    // phong lighting = default
+    phongColor(shadedColor);
+
+    // DEBUGGING MODES
+    if (debugMode == 1) {
+        // normals visualized (mapped -1,1 -> 0,1)
+        color_out = vec4(normalize(gs_out_normal) * 0.5 + 0.5, 1.0);
+    }
+    else if (debugMode == 2) {
+        // height map visualization from displacement texture
+        float height = texture(displacementTexture, gs_out_uv).r;
+        color_out = vec4(height, height, height, 1.0);
+    }
+    else if (debugMode == 3) {
+        // UVs visualized as repeating color pattern
+        color_out = vec4(mod(gs_out_uv, 1.0), 0.0, 1.0);
+    }
+    else {
+        // final shaded result
+        color_out = shadedColor;
+    }
+}

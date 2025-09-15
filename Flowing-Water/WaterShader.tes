@@ -1,0 +1,51 @@
+#version 400
+
+// patch type: quad
+layout(quads, equal_spacing) in;
+
+// uniforms
+uniform mat4 MVP; // MVP matrix for positioning final vert
+
+// input from tcs
+in vec3 tcs_out_worldPosition[];    // OG world-space vertex position
+in vec3 tcs_out_eyeDirection[];     // eye vector (cam -> vertex)
+in vec3 tcs_out_lightDirection[];   // light vector (light -> vertex)
+in vec2 tcs_out_uv[];               // UV coords
+
+// output to geo
+out vec3 tes_out_worldPosition;     // interpolated world pos
+out vec3 tes_out_eyeDirection;      // interpolated eye vector
+out vec3 tes_out_lightDirection;    // interpolated light vector
+out vec2 tes_out_uv;                // interpolated UV
+
+// main loop
+void main() {
+    // each patch has 4 control points (0-3)
+    // layout (counter-clockwise):
+    //  3 ---- 2
+    //  |      |
+    //  0 ---- 1
+
+    // world pos interpolation (bilinear)
+    vec3 col1 = mix(tcs_out_worldPosition[0], tcs_out_worldPosition[1], gl_TessCoord.x);
+    vec3 col2 = mix(tcs_out_worldPosition[3], tcs_out_worldPosition[2], gl_TessCoord.x);
+    tes_out_worldPosition = mix(col1, col2, gl_TessCoord.y);
+
+    // eye direction interpolation
+    vec3 eye1 = mix(tcs_out_eyeDirection[0], tcs_out_eyeDirection[1], gl_TessCoord.x);
+    vec3 eye2 = mix(tcs_out_eyeDirection[3], tcs_out_eyeDirection[2], gl_TessCoord.x);
+    tes_out_eyeDirection = mix(eye1, eye2, gl_TessCoord.y);
+
+    // light direction interpolation
+    vec3 light1 = mix(tcs_out_lightDirection[0], tcs_out_lightDirection[1], gl_TessCoord.x);
+    vec3 light2 = mix(tcs_out_lightDirection[3], tcs_out_lightDirection[2], gl_TessCoord.x);
+    tes_out_lightDirection = mix(light1, light2, gl_TessCoord.y);
+
+    // UV interpolation
+    vec2 uv1 = mix(tcs_out_uv[0], tcs_out_uv[1], gl_TessCoord.x);
+    vec2 uv2 = mix(tcs_out_uv[3], tcs_out_uv[2], gl_TessCoord.x);
+    tes_out_uv = mix(uv1, uv2, gl_TessCoord.y);
+
+    // final output position
+    gl_Position = MVP * vec4(tes_out_worldPosition, 1.0);
+}

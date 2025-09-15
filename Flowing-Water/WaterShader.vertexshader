@@ -1,0 +1,38 @@
+#version 400
+
+// input pos from VBO
+layout(location = 0) in vec3 vertexPosition_modelspace;
+
+// output to tcs
+out vec3 vs_out_worldPosition;  // world space pos
+out vec3 vs_out_eyeDirection;   // dir from vertex to cam
+out vec3 vs_out_lightDirection; // dir from vertex to light
+out vec2 vs_out_uv;             // UV coords
+
+// uniforms
+uniform mat4 V;             // view matrix
+uniform mat4 M;             // model matrix
+uniform vec3 LightPosition_worldspace;  // pos of light (world space)
+uniform float time;         // time (used for scrolling water UVs)
+uniform float texOffset;    // offset for texture scroll
+uniform float texScale;     // tiling scale for UVs
+
+// main function
+void main() {
+    // compute position of the vertexv(world space)
+    vec4 worldPosition = M * vec4(vertexPosition_modelspace, 1.0);
+    vs_out_worldPosition = worldPosition.xyz;
+
+    // compute animated UV based on xz position (scrolls over time)
+    vs_out_uv = (worldPosition.xz + texOffset + (time * 0.08)) / texScale;
+
+    // compute eye (cam) direction in world space
+    vec3 eyePosition_world = vec3(inverse(V)[3]); // extract camera position from view matrix
+    vs_out_eyeDirection = eyePosition_world - worldPosition.xyz;
+
+    // compute light direction
+    vs_out_lightDirection = LightPosition_worldspace - worldPosition.xyz;
+
+    // send vertex position (still in world space) -> tessellation shader
+    gl_Position = worldPosition;
+}

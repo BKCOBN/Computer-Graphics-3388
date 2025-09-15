@@ -1,0 +1,45 @@
+#version 400
+
+// each patch consists of 4 vertices (quads)
+layout(vertices = 4) out;
+
+// input from vertex shader
+in vec3 vs_out_worldPosition[];     // position of each vertex (world space)
+in vec3 vs_out_eyeDirection[];      // direction from vertex -> cam
+in vec3 vs_out_lightDirection[];    // direction from vertex -> light source
+in vec2 vs_out_uv[];                // UV coordinate
+
+// output to tes shader
+out vec3 tcs_out_worldPosition[];   // world position
+out vec3 tcs_out_eyeDirection[];    // eye direction
+out vec3 tcs_out_lightDirection[];  // light direction
+out vec2 tcs_out_uv[];              // UVs
+
+// uniforms
+uniform float outerTess;  // tessellation lvl 4 outer edges
+uniform float innerTess;  // tessellation lvl 4 inside of the patch
+
+// main function
+void main() {
+    // send data for each vertex in the patch -> tes
+    tcs_out_worldPosition[gl_InvocationID] = vs_out_worldPosition[gl_InvocationID];
+    tcs_out_eyeDirection[gl_InvocationID] = vs_out_eyeDirection[gl_InvocationID];
+    tcs_out_lightDirection[gl_InvocationID] = vs_out_lightDirection[gl_InvocationID];
+    tcs_out_uv[gl_InvocationID] = vs_out_uv[gl_InvocationID];
+
+    // send the vertex pos
+    gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
+
+    // only one invocation/patch sets tessellation levels
+    if (gl_InvocationID == 0) {
+        // edge tessellation lvls for the 4 patch sides
+        gl_TessLevelOuter[0] = outerTess;
+        gl_TessLevelOuter[1] = outerTess;
+        gl_TessLevelOuter[2] = outerTess;
+        gl_TessLevelOuter[3] = outerTess;
+
+        // innner patch tessellation lvls
+        gl_TessLevelInner[0] = innerTess;
+        gl_TessLevelInner[1] = innerTess;
+    }
+}
