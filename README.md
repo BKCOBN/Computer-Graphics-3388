@@ -3,4 +3,4 @@
 
 #NOTE
 
-I directly accessed some essential libraries, totally ineffcient but what can ya do 
+I directly accessed some essential libraries because it wasn't working otherwise
